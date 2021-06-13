@@ -7,6 +7,14 @@ namespace DotNetCore.Microservices.Authentication.Models
 {
     public class ApplicationConfiguration
     {
+        private const string AppName = "Microservices.Authentication";
+        public string ApplicationName 
+        { 
+            get
+            {
+                return AppName;
+            }
+        }
         public ConnectionStrings ConnectionStrings { get; set; }
         public JWT JWT { get; set; }
         public string AllowedHosts { get; set; }
