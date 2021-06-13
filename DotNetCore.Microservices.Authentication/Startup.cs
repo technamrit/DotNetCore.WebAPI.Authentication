@@ -18,6 +18,8 @@ using Serilog.Sinks.MSSqlServer;
 using Serilog;
 using Serilog.Formatting.Compact;
 using System;
+using System.Collections.ObjectModel;
+using System.Data;
 
 namespace DotNetCore.Microservices.Authentication
 {
@@ -133,13 +135,16 @@ namespace DotNetCore.Microservices.Authentication
                 .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
                 .WriteTo.Seq("http://localhost:5341/")
                 .WriteTo.MSSqlServer(
-                    connectionString: Configuration.GetConnectionString("DatabaseConnectionString"),
-                    tableName: "DotNetCoreWebAPILogs",
-                    appConfiguration: Configuration,
-                    autoCreateSqlTable: true,
-                    columnOptionsSection: Configuration.GetSection("Serilog:ColumnOptions"),
-                    schemaName: "dbo"
-                ).CreateLogger();
+                         connectionString: Configuration.GetConnectionString("DatabaseConnectionString"),
+                         sinkOptions: new MSSqlServerSinkOptions
+                         {
+                             TableName = "DotNetCoreWebAPILogs",
+                             SchemaName = "dbo",
+                             AutoCreateSqlTable = true
+                         },
+                         appConfiguration: Configuration,
+                         columnOptionsSection: Configuration.GetSection("Serilog:ColumnOptions"),
+                         columnOptions: GetColumnOptions()).CreateLogger();
             services.AddLogging(log => log.AddSerilog(logger));
         }
 
@@ -147,5 +152,34 @@ namespace DotNetCore.Microservices.Authentication
         {
             services.AddSingleton<ITokenHelper, TokenHelper>();
         }
+
+        private LoggerConfiguration GetLoggerConfiguration()
+        {
+            return new LoggerConfiguration().Enrich.FromLogContext();
+        }
+
+        private static ColumnOptions GetColumnOptions()
+        {
+            var columnOptions = new ColumnOptions
+            {
+                Store = new Collection<StandardColumn>(),
+                TimeStamp =
+                {
+                    ConvertToUtc = true,
+                    ColumnName = "Created"
+                },
+                AdditionalColumns = new Collection<SqlColumn>
+                {
+                    new SqlColumn
+                    {
+                        DataType = SqlDbType.DateTimeOffset,
+                        ColumnName = "CreatedAt",
+                        AllowNull = false
+                    },
+                }
+            };
+            return columnOptions;
+        }
+
     }
 }
